@@ -1,7 +1,7 @@
 classdef MateLayer
 % The abstract class for all layers in Mate
   properties
-    name = {};
+    name = [];
     takes = 'preceding';
     weightDecay = [];
     learningRate = [];
@@ -53,6 +53,22 @@ classdef MateLayer
         obj.weights.w{j} = obj.weights.w{j}+obj.weights.momentum{j};
       end
     end
+    
+    function obj = updateNagStart(obj, mr) 
+      for j = 1:numel(obj.weights.w)
+        obj.weights.momentum{j} = mr*obj.weights.momentum{j};
+        obj.weights.w{j} = obj.weights.w{j}+obj.weights.momentum{j};
+      end
+    end    
+    
+    function obj = updateNagEnd(obj, lr, batchSz) 
+      for j = 1:numel(obj.weights.w)
+        d = -lr*obj.learningRate(j)*obj.weightDecay(j)*obj.weights.w{j}-...
+          lr*obj.learningRate(j)/batchSz*obj.weights.dzdw{j};
+        obj.weights.momentum{j} = obj.weights.momentum{j}+d;
+        obj.weights.w{j} = obj.weights.w{j}+d;
+      end
+    end    
     
     function obj = move(obj, destination)
       switch destination
@@ -113,8 +129,12 @@ classdef MateLayer
     function disp(obj)
       fprintf('%s (%s)\n', obj.name, class(obj));
       fprintf('Takes ');
-      for t = obj.takes
-        fprintf(' %s ', t{1});
+      if iscell(obj.takes)
+        for t = obj.takes
+          fprintf(' %s ', t{1});
+        end
+      else
+        fprintf(' %s ',obj.takes);
       end
       fprintf('\n');
           
